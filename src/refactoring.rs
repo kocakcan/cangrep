@@ -228,3 +228,15 @@
 ///
 /// The bodies of the if let and unwrap_or_else functions are the same in both cases: we print the
 /// error and exit.
+///
+/// Splitting Code into a Library Crate
+///
+/// We'll split the src/main.rs file and put some code into the src/lib.rs file. That way, we can
+/// test code and have a src/main.rs file with fewer possibilities.
+///
+/// Let's move all the code that isn't in the main function from src/main.rs to src/lib.rs:
+///
+///     - The run function definition
+///     - The relevant use statements
+///     - The definition of Config
+///     - The Config::build function definition
