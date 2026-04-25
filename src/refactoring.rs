@@ -114,3 +114,117 @@
 /// Now our code more clearly conveys that query and file_path are related and that their purpose is
 /// to configure how the program will work. Any code that uses these values knows to find them in
 /// the config instance in the fields named for their purpose.
+///
+/// Creating a Constructor for Config
+///
+/// So far, we've extracted the logic responsible for the command line arguments from main and
+/// placed it in the parse_config function. Doing so helped us see that the query and file_path
+/// values were related, and that relationship should be conveyed in our code. We then added a
+/// Config struct to name the related purpose of query and file_path and to be able to return the
+/// values' names as struct field names from the parse_config function.
+///
+/// So now that the purpose of the parse_config function is to create a Config instance, we can
+/// change parse_config from a plain function to a function named new that is associated with the
+/// Config struct. Making this change will make the code more idiomatic. We can create instances of
+/// types in the standard library, such as String, by calling String::new. Similarly, by changing
+/// parse_config into a new function associated with Config, we'll be able to create instances of
+/// Config by calling Config::new.
+///
+/// Fixing the Error Handling
+///
+/// Now we'll work on fixing our error handling. Recall that attempting to access the values in the
+/// args vector at index 1 or index 2 will cause the program to panic if the vector contains fewer
+/// than three items.
+///
+/// Improving the Error Message
+///
+/// We add a check in the new function that will verify that the slice is long enough before
+/// accessing index 1 and index 2. If the slice isn't long enough, the program panics and displays a
+/// better error message.
+///
+/// Returning a Result Instead of Calling panic!
+///
+/// We can instead return a Result value that will contain a Config instance in the successful case
+/// and will describe the problem in the error case. We're also going to change the function name
+/// from new to build because many programmers expect new functions to never fail. When
+/// Config::build is communicating to main, we can use the Result type to signal there was a
+/// problem. Then we can change main to convert an Err variant into a more practical error for our
+/// users without the surrounding text about thread 'main' and RUST_BACKTRACE that a call to panic!
+/// causes.
+///
+/// Our build function returns a Result with a Config instance in the success case and a string
+/// literal in the error case. Our error values will always be string literals that have the 'static
+/// lifetime.
+///
+/// We've made two changes in the body of the function: instead of calling panic! when the user
+/// doesn't pass enough arguments, we now return an Err value, and we've wrapped the Config return
+/// value in an Ok. These changes make the function conform to its new type signature.
+///
+/// Returning an Err value from Config::build allows the main function to handle the Result value
+/// returned from the build function and exit the process more cleanly in the error case.
+///
+/// Calling Config::build and Building Errors
+///
+/// To handle the error case and print a user-friendly message, we need to update main to handle the
+/// Result being returned by Config::build. We'll also take the responsibility of exiting the
+/// command line tool with a nonzero error code away from panic! and instead implement it by hand. A
+/// nonzero exit status is a convention to signal to the process that called our program that the
+/// program exited with an error state.
+///
+/// Using unwrap_or_else allows us to define some custom, non-panic! error handling. If the Result
+/// is an Ok value, this method's behaviour is similar to unwrap: it returns the inner value that Ok
+/// is wrapping. However, if the value is an Err value, this method calls the code in the closure,
+/// which is an anonymous function we define and pass as an argument to unwrap_or_else. For now, you
+/// just need to know that unwrap_or_else will pass the inner value of the Err, which in this case
+/// is the static string "not enough arguments", to our closure in the argument err that appears
+/// between the vertical pipes. The code in the closure can then use the err value when it runs.
+///
+/// We've added a new use line to bring process from the standard library into scope. The code in
+/// the closure will be run in the error case is only two lines: we print the err value and then
+/// call process::exit. The process::exit function will stop the program immediately and return the
+/// number that was passed as the exit status code.
+///
+/// Extracting Logic from main
+///
+/// Now that we've finished refactoring configuration parsing, let's turn to the program's logic.
+/// We'll extract a function named run that will hold all the logic currently in the main function
+/// that isn't involved with setting up configuration or handling errors. When we're done, main will
+/// be concise and easy to verify by inspection, and we'll be able to write tests for all the other
+/// logic.
+///
+/// Returning Errors from the run Function
+///
+/// With the remaining program logic separated into the run function, we can improve the error
+/// handling, as we did with Config::build. Instead of allowing the program to panic by calling
+/// expect, the run function will return a Result<T, E> when something goes wrong. This will let us
+/// further consolidate the logic around errors into main in a user-friendly way.
+///
+/// We've made three significant changes here. First, we changed the return type of the run function
+/// to Result<(), Box<dyn Error>>. This function previously returned the unit type, (), and we keep
+/// that as the value returned in the Ok case.
+///
+/// For the error type, we used the trait object Box<dyn Error> (and we've brought std::error::Error
+/// into scope with a use statement at the top). For now, just know that Box<dyn Error> means the
+/// function will return a type that implements the Error trait, but we don't have to specify what
+/// particular type the return value will be. This gives us flexibility to return error values that
+/// may be of different types in different error cases. The dyn keyword is short for dynamic.
+///
+/// Second, we've removed the call to expect in favor of the ? operator. Rather than panic! on an
+/// error, ? will return the error value from the current function for the caller to handle.
+///
+/// Third, the run function now returns an Ok value in the success case. We've declared the run
+/// function's success type as () in the signature, which means we need to wrap the unit type value
+/// in the Ok value. Thi Ok(()) syntax might look a bit strange at first, but using () like this is
+/// the idiomatic way to indicate that we're calling run for its side effects only; it doesn't
+/// return a value we need.
+///
+/// Handling Errors Returned From run in main
+///
+/// We use if let rather than unwrap_or_else to check whether run returns an Err value and to call
+/// process::exit(1) if it does. The run function doesn't return a value that we want to unwrap in
+/// the same way that Config::build returns the Config instance. Because run returns () in the
+/// success case, we only care about detecting an error, so we don't need unwrap_or_else to return
+/// the unwrapped value, which would only be ().
+///
+/// The bodies of the if let and unwrap_or_else functions are the same in both cases: we print the
+/// error and exit.
